@@ -1,0 +1,35 @@
+## Roll 1
+
+You awaken in a dimly lit cavern, the air is cold and a soft echo of dripping water resonates around you. Faint luminescent fungi draped across the cave walls provides the only source of light, casting an ethereal glow. You can smell the rich earth and feel the hard stone beneath you. In the distance, you can make out two potential paths: one tunnel narrows off to the left, disappearing into darkness while another leads downward, with a faint warm light flickering at its end.
+
+Possible actions:
+  - Walk towards the dark tunnel
+  - Approach the tunnel with the warm light
+  - Examine the luminous fungi
+  - Stay where you are and listen for noises
+
+Action taken: Walk towards the dark tunnel
+
+## Roll 2
+
+As you venture towards the dark tunnel, the torchlight flickers against the irregular stone walls. The air grows colder, making your skin prickle. You sense a strange tension as you discover three paths branching out in front of you. One path is lit by green glowing mushrooms, the second path glows with red light from some unknown source, and the path on the right is totally dark.
+
+Possible actions:
+  - Take the green-lit path
+  - Take the red-lit path
+  - Take the dark path
+  - Go back outside
+
+Action taken: Take the dark path
+
+## Roll 3
+
+As you tread carefully along the dark path, the sounds of the forest grow eerily quiet. The path tightens and seems to swallow you whole. Suddenly, you notice a faint glow up ahead. It seems to be coming from an opening in the path. As you approach, you realize it's a large cavern illuminated by various luminescent plants and mushrooms.
+
+Possible actions:
+  - Continue into the cavern
+  - Inspect the luminescent plants
+  - Turn back
+
+Action taken: Continue into the cavern
+
