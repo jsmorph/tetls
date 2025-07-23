@@ -7,7 +7,7 @@ if [ -z "$TEO_AUTH" ]; then
     echo "Need TEO_AUTH"; exit 1
 fi
 
-FILENAME=${1:-adventure.sh}
+FILENAME=${1:-adventure.js}
 
 set -e
 
