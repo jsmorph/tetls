@@ -86,3 +86,22 @@ curl -s -X POST \
 cat test.json | jq . 
 echo
 
+echo '# Get an attestation from Javascript'
+cat<<EOF > d.json
+{"source": ["import * as std from 'std';",
+           "const x = std.open('hpc', 'w');",
+           "x.puts(JSON.stringify({attest:{data:'Tacos are good.'}}));",
+           "x.close();",
+           "const y = std.open('hpc', 'r');",
+           "const js = y.readAsString();",
+           "const a = JSON.parse(js);",
+           "const result = {attestation: a};",
+           "print(JSON.stringify(result));"
+          ]
+}
+EOF
+curl -s -H "X-TEO-Authorization: $TEO_AUTH" -X POST  -d @d.json https://api.tetls.net/js | 
+    tee test.json | jq .
+echo
+
+
