@@ -138,17 +138,17 @@ curl -X POST https://enclave:5002/tlsp \
 
 ## JavaScript Handler Functions
 
-The following functions can be called from JavaScript code executed via the `/js` endpoint by writing JSON to the `hpc` file:
+The following functions can be called from JavaScript code executed via the `/js` endpoint by writing and reading JSON to the special `hpc` file:
 
 ```javascript
 import * as std from 'std';
 
-// Write request to hpc file
+// Write request to hpc
 const f = std.open("hpc", "w");
 f.puts(JSON.stringify({function_name: parameters}));
 f.close();
 
-// Read response from hpc file
+// Read response from hpc
 const f2 = std.open("hpc", "r");
 const result = JSON.parse(f2.readAsString());
 f2.close();
@@ -169,6 +169,112 @@ function hpc(arg) {
 }
 ```
 
+("hpc" originally stood for "host procedure call", but the "host" in the case is the WASM engine, which is the "host" for the JavaScript interpreter. This "host" is _not_ the enclave's host!)
+
+
+### `rng` - Random Number Generation
+
+Generates cryptographically secure random bytes using the AWS Nitro Enclave NSM.
+
+**JavaScript Usage:**
+```javascript
+const result = hpc({"rng": {}});
+const randomBytes = result.bytes;      // Array of random bytes
+const randomHex = result.hex;          // Hex-encoded string
+```
+
+**Response:**
+```json
+{
+  "bytes": [42, 156, 73, 91, ...],
+  "hex": "2a9c495b..."
+}
+```
+
+### `attest` - Generate Attestation
+
+Creates a cryptographic attestation document covering the provided data using the AWS Nitro Enclave NSM.
+
+**JavaScript Usage:**
+```javascript
+const result = hpc({
+  "attest": {
+    "data": "Data to be attested"
+  }
+});
+const attestationHex = result.hex;
+```
+
+**Response:**
+```json
+{
+  "hex": "846a5369676e6174757265..."
+}
+```
+
+**Security Note:** The attestation document cryptographically proves that the specified data was processed within this specific enclave instance.
+
+### `tlsp` - TLS Proxy
+
+Performs an HTTPS request through the enclave's TLS proxy with attestation coverage.
+
+**JavaScript Usage:**
+```javascript
+const result = hpc({
+  "tlsp": {
+    "url": "https://api.example.com/data",
+    "method": "GET",
+    "headers": {
+      "User-Agent": "TEO-Worker/1.0",
+      "Authorization": "Bearer token"
+    },
+    "body": "request-body-data"
+  }
+});
+
+const responseStatus = result.status;
+const responseBody = result.body;
+const responseHeaders = result.headers;
+```
+
+**Response:**
+```json
+{
+  "status": 200,
+  "status_line": "HTTP/1.1 200 OK",
+  "headers": {
+    "content-type": "application/json",
+    "content-length": "42"
+  },
+  "body": "response-body-data"
+}
+```
+
+**Security Notes:**
+- All proxy requests are covered by the enclave's attestation
+- Authorization headers are automatically redacted with HMAC-SHA256 in attestation logs
+- X-TEO-Authorization headers are automatically removed from proxied requests
+
+### `test` - String Length Test
+
+A simple test function that returns the length of a provided string.
+
+**JavaScript Usage:**
+```javascript
+const result = hpc({
+  "test": {
+    "x": "Hello, world!"
+  }
+});
+const length = result.length;
+```
+
+**Response:**
+```json
+{
+  "length": 13
+}
+```
 
 ### `genkeypair` - Generate Elliptic Curve Key Pair
 
@@ -251,51 +357,6 @@ const plaintext = result.plaintext;
 {
   "plaintext": "Hello, secure world!"
 }
-```
-
-### Complete Example: End-to-End Encryption
-
-```javascript
-import * as std from 'std';
-
-// Generate key pair
-let f = std.open("hpc", "w");
-f.puts(JSON.stringify({"genkeypair": {}}));
-f.close();
-f = std.open("hpc", "r");
-const keyResult = JSON.parse(f.readAsString());
-f.close();
-
-const publicKey = keyResult.public_key;
-
-// Encrypt data
-f = std.open("hpc", "w");
-f.puts(JSON.stringify({
-  "encrypt": {
-    "public_key": publicKey,
-    "plaintext": "Secret message"
-  }
-}));
-f.close();
-f = std.open("hpc", "r");
-const encryptResult = JSON.parse(f.readAsString());
-f.close();
-
-const ciphertext = encryptResult.ciphertext;
-
-// Decrypt data
-f = std.open("hpc", "w");
-f.puts(JSON.stringify({
-  "decrypt": {
-    "ciphertext": ciphertext
-  }
-}));
-f.close();
-f = std.open("hpc", "r");
-const decryptResult = JSON.parse(f.readAsString());
-f.close();
-
-print(decryptResult.plaintext); // "Secret message"
 ```
 
 ### Cryptographic Details
