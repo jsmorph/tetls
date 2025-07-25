@@ -105,3 +105,31 @@ curl -s -H "X-TEO-Authorization: $TEO_AUTH" -X POST  -d @d.json https://api.tetl
 echo
 
 
+echo '# Exercise the public key functions'
+cat<<EOF > d.json
+{"source": ["import * as std from 'std';",
+            "function hpc(arg) {",
+            "  const x = std.open('hpc', 'w');",
+            "  x.puts(JSON.stringify(arg));",
+            "  x.close();",
+            "  const y = std.open('hpc', 'r');",
+            "  const js = y.readAsString();",
+            "  print('// debug ' + js);",
+            "  return JSON.parse(js);",
+            "}",
+
+            "const plaintext = 'tacos';",
+	    "const pubkey = hpc({'genkeypair':{}})['public_key'];",
+	    "const co = hpc({'encrypt':{'public_key':pubkey,'plaintext':plaintext}});",
+	    "const ciphertext = co['ciphertext'];",
+	    "const check = hpc({'decrypt':{'ciphertext':ciphertext}})['plaintext'];",
+            "const result = {public_key: pubkey, plaintext: plaintext, ciphertext: ciphertext, check: check};",
+            "print(JSON.stringify(result));"
+          ]
+}
+EOF
+curl -s -H "X-TEO-Authorization: $TEO_AUTH" -X POST  -d @d.json https://api.tetls.net/js | 
+    tee test.json |
+    jq -r .parsed_response_body
+echo
+
