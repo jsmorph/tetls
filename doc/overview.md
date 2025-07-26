@@ -160,3 +160,37 @@ sequenceDiagram
     Interceptor ->> Client: Response
 ```
 
+## Example interaction
+
+The interactions can be much more elaborate when doing JavaScript
+execution.  Here's an abstract example that uses `getidentity` to
+obtain credentials from a KMS in order to submit a request to another
+endpoint.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Service
+    participant Execution
+    participant KMS
+    participant Endpoint
+
+    Client->>Service: Request to execute code
+    Service->>Execution: Start execution
+    Execution->>Execution: call getidentity()
+    Execution->>KMS: Request credentials
+    KMS->>KMS: Verify identity
+    KMS->>KMS: Encrypt credentials
+    KMS-->>Execution: Encrypted credentials
+    Execution->>Execution: Decrypt credentials
+    Execution->>Execution: Create API request
+    Execution->>Execution: Sign request with credentials
+    Execution->>Endpoint: Send API request
+    Endpoint-->>Execution: Response
+    Execution->>Execution: Perform computation
+    Execution-->>Service: Return result
+    Service-->>Client: Return result
+```	
+
+This approach could be use to make a secure, attested AWS API request
+(using the convenience functions `addawssign` and `xmltojson`).
