@@ -147,12 +147,13 @@ JavaScript can access the following functions:
 1. `attest`: Generate an attestation
 1. `getidentity`: Get worker identity information
 1. `addawssign`: Add AWS SigV4 signature to requests
+1. `xmltojson`: Convert XML to JSON
 1. `decrypt`: Decrypt using private key
 1. `encrypt`: Encrypt using the public key (just for testing)
 
 See below for details.
 
-These can be called from JavaScript code executed via the `/js` endpoint by writing and reading JSON to the special `hpc` file:
+These functions can be called from JavaScript code executed via the `/js` endpoint by writing and reading JSON to the special `hpc` file:
 
 ```javascript
 import * as std from 'std';
@@ -367,8 +368,8 @@ const signedRequest = result.signed_request;
     "method": "GET", 
     "headers": {
       "Host": "s3.amazonaws.com",
-      "Authorization": "AWS4-HMAC-SHA256 Credential=...",
-      "X-Amz-Date": "20231201T120000Z",
+      "authorization": "AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20250726/us-east-1/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=fb594df9535686e66d0970e5cc52352fd381a028d395564db01ffe9c24c6ca01",
+      "x-amz-date": "20250726T133944Z",
       "X-Amz-Content-Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     "body": null
@@ -381,6 +382,52 @@ const signedRequest = result.signed_request;
 - All signing operations use the official AWS SigV4 algorithm
 - Signatures include timestamp and content hash for integrity
 - The signed request can be used immediately with AWS services
+
+### `xmltojson`: XML to JSON Conversion
+
+Converts XML strings to JSON format. This function is particularly useful for processing AWS API responses, which are typically returned in XML format.
+
+**JavaScript Usage:**
+```javascript
+import * as std from 'std';
+
+const f = std.open("hpc", "w");
+f.puts(JSON.stringify({
+  "xmltojson": {
+    "xml": "<ListBucketsResult><Buckets><Bucket><Name>my-bucket</Name></Bucket></Buckets></ListBucketsResult>"
+  }
+}));
+f.close();
+
+const f2 = std.open("hpc", "r");
+const result = JSON.parse(f2.readAsString());
+f2.close();
+
+const jsonData = JSON.parse(result.json);
+```
+
+**Request Fields:**
+- `xml`: XML string to be converted to JSON
+
+**Response:**
+```json
+{
+  "json": "{\"ListBucketsResult\":{\"Buckets\":{\"Bucket\":{\"Name\":\"my-bucket\"}}}}"
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": "Failed to parse XML: unexpected end of input"
+}
+```
+
+**Usage Notes:**
+- The function returns a JSON object containing a `json` field with the converted XML as a JSON string
+- On parsing errors, returns a JSON object with an `error` field containing the error message
+- Supports complex XML structures including nested elements and attributes
+- Designed to work well with AWS API responses
 
 ### `encrypt`: Public Key Encryption
 
