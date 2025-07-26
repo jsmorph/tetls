@@ -145,7 +145,7 @@ JavaScript can access the following functions:
 1. `rng`: Get random bytes
 1. `tlsp`: Make an HTTPS request
 1. `attest`: Generate an attestation
-1. `getidentity`: Get worker identity information
+1. `getidentity`: Get worker identity data
 1. `addawssign`: Add AWS SigV4 signature to requests
 1. `xmltojson`: Convert XML to JSON
 1. `decrypt`: Decrypt using private key
@@ -274,7 +274,9 @@ const attestationHex = result.hex;
 
 ### `getidentity`: Get Worker Identity Information
 
-Retrieves the worker's identity information including the public key, source code hash, and attestation. This function returns the cryptographic identity established when the worker was initialized.
+Retrieves the worker's identity data including the public key, source code hash, and attestation. This function returns the cryptographic identity established when the worker was initialized.  This triple effectively uniquely identifies the execution of this JavaScript source in the enclave.
+
+This data could be given to an endpoint (via `tlsp`) to obtain credentials that are subsequently used for other operations. That endpoint should encrypt the credentials for the public key given in the request, and the JavaScript can `decrypt` that ciphertext.  This approach should be secure (assuming the enclave and its image are) because the endpoint can authenticate the requester, and the private key in the enclave is not accessible outside that runtime (even to the JavaScript that's executing).
 
 **JavaScript Usage:**
 ```javascript
@@ -461,6 +463,8 @@ const ciphertext = result.ciphertext;
 ### `decrypt`: Private Key Decryption
 
 Decrypts ECIES ciphertext using the private key established when the worker was initialized.
+
+Typically some endpoint encrypted data, requested by `tlsp` with `getidentity` data, based on the public key in that identity data. Then the client can `decrypt` that ciphertext.  Note that the private key is not itself accessible from JavaScript.
 
 **JavaScript Usage:**
 ```javascript
