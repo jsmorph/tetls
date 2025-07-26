@@ -138,6 +138,9 @@ curl -X POST https://api.tetls.net/js \
   -d '{"source": "return Math.random();"}'
 ```
 
+Note: `eval` is available in JavaScript.  Since JavaScript code also has access to HTTP requests (see `tlsp`), JavaScript code could download JavaScript code from some endpoint and execute it.
+
+
 ## JavaScript Access To Native Functions
 
 JavaScript can access the following core functions:
