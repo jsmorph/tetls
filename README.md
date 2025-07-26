@@ -29,7 +29,7 @@ and [`examples/adventure.sh`](examples/adventure.sh), with output at
 for many examples.
 
 **Note there is no code (yet) in this repo.  Only documentation and
-examples for now.**
+examples for now.** 
 
 Here's a quick example.  To run this example yourself, you'd need an
 API key (`$TEO_AUTH`), which you probably don't have.

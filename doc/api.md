@@ -34,66 +34,17 @@ All successful responses return an attestation object:
 }
 ```
 
-The attestation is an AWS Nitro attestation as described
+The `attestation` is an AWS Nitro attestation as described
 [here](https://aws.amazon.com/blogs/compute/validating-attestation-documents-produced-by-aws-nitro-enclaves/).
 See the [References](#references).
 
 ## Endpoints
 
-### POST /js - JavaScript Execution
-
-Execute JavaScript code in a WASM environment.
-
-**Request Body:**
-```json
-{
-  "source": "console.log('Hello World'); return {result: 42};",
-  "arg": "optional-argument"
-}
-```
-
-**Source Field Options:**
-- String: Single line or multiline JavaScript code
-- Array: Array of strings joined with newlines
-
-**Response Body (in attestation data.response):**
-```json
-{
-  "result": "<execution-result-string>",
-  "error": null,
-  "parsed_response": <parsed-json-if-valid>
-}
-```
-
-**Example:**
-```bash
-curl -X POST https://enclave:5002/js \
-  -H "X-TEO-Authorization: your-token" \
-  -H "Content-Type: application/json" \
-  -d '{"source": "return Math.random();"}'
-```
-
-### GET /rng - Random Number Generation
-
-Generate cryptographically secure random bytes.
-
-**Response Body (in attestation data.response):**
-```json
-{
-  "bytes": [1, 2, 3, ...],
-  "hex": "0102030405..."
-}
-```
-
-**Example:**
-```bash
-curl -X GET https://enclave:5002/rng \
-  -H "X-TEO-Authorization: your-token"
-```
-
-### POST /tlsp - TLS Proxy
+### POST /tlsp: HTTPS requests
 
 Proxy HTTPS requests with attestation.
+
+(The name `tlsp` is an artifact and should be replaced.)
 
 **Request Body:**
 ```json
@@ -126,7 +77,7 @@ Proxy HTTPS requests with attestation.
 
 **Example:**
 ```bash
-curl -X POST https://enclave:5002/tlsp \
+curl -X POST https://api.tetls.net/tlsp \
   -H "X-TEO-Authorization: your-token" \
   -H "Content-Type: application/json" \
   -d '{
@@ -136,9 +87,72 @@ curl -X POST https://enclave:5002/tlsp \
   }'
 ```
 
-## JavaScript Handler Functions
+### GET /rng: Random Number Generation
 
-The following functions can be called from JavaScript code executed via the `/js` endpoint by writing and reading JSON to the special `hpc` file:
+Generate cryptographically secure random bytes.
+
+**Response Body (in attestation data.response):**
+```json
+{
+  "bytes": [1, 2, 3, ...],
+  "hex": "0102030405..."
+}
+```
+
+**Example:**
+```bash
+curl -X GET https://api.tetls.net/rng \
+  -H "X-TEO-Authorization: your-token"
+```
+
+### POST /js: JavaScript Execution
+
+Execute JavaScript code in a WASM environment.
+
+**Request Body:**
+```json
+{
+  "source": "console.log('Hello World'); return {result: 42};",
+  "arg": "optional-argument"
+}
+```
+
+**Source Field Options:**
+- String: Single line or multiline JavaScript code
+- Array: Array of strings joined with newlines
+
+**Response Body (in attestation data.response):**
+```json
+{
+  "result": "<execution-result-string>",
+  "error": null,
+  "parsed_response": <parsed-json-if-valid>
+}
+```
+
+**Example:**
+```bash
+curl -X POST https://api.tetls.net/js \
+  -H "X-TEO-Authorization: your-token" \
+  -H "Content-Type: application/json" \
+  -d '{"source": "return Math.random();"}'
+```
+
+## JavaScript Access To Native Functions
+
+JavaScript can access the following functions:
+
+1. `rng`: Get random bytes
+1. `tlsp`: Make an HTTPS request
+1. `attest`: Generate an attestation
+1. `getidentity`: Get worker identity information
+1. `addawssign`: Add AWS SigV4 signature to requests
+1. `decrypt`: Decrypt using private key
+1. `encrypt`: Encrypt using the public key (just for testing)
+
+See below for details.
+
+These can be called from JavaScript code executed via the `/js` endpoint by writing and reading JSON to the special `hpc` file:
 
 ```javascript
 import * as std from 'std';
@@ -157,7 +171,7 @@ f2.close();
 For example, the following JavaScript function is handy:
 
 ```javascript
-# Example arg: {"rng":{}}.
+// Example arg: {"rng":{}}.
 function hpc(arg) {
   const x = std.open('hpc', 'w');
   x.puts(JSON.stringify(arg));
@@ -167,12 +181,14 @@ function hpc(arg) {
   print('// debug ' + js);
   return JSON.parse(js);
 }
+
+const random_byte = hpc({"rng":{}})['bytes'][0]; // See 'rng' below
 ```
 
-("hpc" originally stood for "host procedure call", but the "host" in the case is the WASM engine, which is the "host" for the JavaScript interpreter. This "host" is _not_ the enclave's host!)
+"hpc" originally stood for "host procedure call", but the "host" in the case is the WASM engine, which is the "host" for the JavaScript interpreter. This "host" is _not_ the enclave's host!
 
 
-### `rng` - Random Number Generation
+### `rng`: Random Number Generation
 
 Generates cryptographically secure random bytes using the AWS Nitro Enclave NSM.
 
@@ -191,30 +207,7 @@ const randomHex = result.hex;          // Hex-encoded string
 }
 ```
 
-### `attest` - Generate Attestation
-
-Creates a cryptographic attestation document covering the provided data using the AWS Nitro Enclave NSM.
-
-**JavaScript Usage:**
-```javascript
-const result = hpc({
-  "attest": {
-    "data": "Data to be attested"
-  }
-});
-const attestationHex = result.hex;
-```
-
-**Response:**
-```json
-{
-  "hex": "846a5369676e6174757265..."
-}
-```
-
-**Security Note:** The attestation document cryptographically proves that the specified data was processed within this specific enclave instance.
-
-### `tlsp` - TLS Proxy
+### `tlsp`: TLS Proxy
 
 Performs an HTTPS request through the enclave's TLS proxy with attestation coverage.
 
@@ -255,37 +248,39 @@ const responseHeaders = result.headers;
 - Authorization headers are automatically redacted with HMAC-SHA256 in attestation logs
 - X-TEO-Authorization headers are automatically removed from proxied requests
 
-### `test` - String Length Test
+### `attest`:  Generate Attestation
 
-A simple test function that returns the length of a provided string.
+Creates a cryptographic attestation document covering the provided data using the AWS Nitro Enclave NSM.
 
 **JavaScript Usage:**
 ```javascript
 const result = hpc({
-  "test": {
-    "x": "Hello, world!"
+  "attest": {
+    "data": "Data to be attested"
   }
 });
-const length = result.length;
+const attestationHex = result.hex;
 ```
 
 **Response:**
 ```json
 {
-  "length": 13
+  "hex": "846a5369676e6174757265..."
 }
 ```
 
-### `genkeypair` - Generate Elliptic Curve Key Pair
+**Security Note:** The attestation document cryptographically proves that the specified data was processed within this specific enclave instance.
 
-Generates a P-256 elliptic curve key pair for ECIES encryption. The private key is stored securely in memory for the duration of the JavaScript execution.
+### `getidentity`: Get Worker Identity Information
+
+Retrieves the worker's identity information including the public key, source code hash, and attestation. This function returns the cryptographic identity established when the worker was initialized.
 
 **JavaScript Usage:**
 ```javascript
 import * as std from 'std';
 
 const f = std.open("hpc", "w");
-f.puts(JSON.stringify({"genkeypair": {}}));
+f.puts(JSON.stringify({"getidentity": {}}));
 f.close();
 
 const f2 = std.open("hpc", "r");
@@ -293,16 +288,101 @@ const result = JSON.parse(f2.readAsString());
 f2.close();
 
 const publicKey = result.public_key;
+const sourceHash = result.source_hash;
+const attestation = result.attestation;
 ```
 
 **Response:**
 ```json
 {
-  "public_key": "04abcd1234567890abcdef..." 
+  "public_key": "04abcd1234567890abcdef...",
+  "source_hash": "sha256hash1234567890abcdef...",
+  "attestation": "846a5369676e6174757265..."
 }
 ```
 
-### `encrypt` - Public Key Encryption
+**Response Fields:**
+- `public_key`: Hex-encoded public key from the worker's key pair
+- `source_hash`: SHA-256 hash of the source code used to initialize the worker
+- `attestation`: Hex-encoded attestation document covering `hash(public_key, source_hash)`
+
+**Security Notes:**
+- The source hash cryptographically binds the worker's identity to its source code
+- The attestation proves that the identity was established within this specific enclave instance
+- If the worker was not initialized with source code (missing `-e` flag), all fields will be empty strings
+
+### `addawssign`: Add AWS SigV4 Signature
+
+Adds AWS Signature Version 4 authentication to HTTP requests. This function takes a request object and AWS credentials, then returns the same request with the proper AWS authentication headers added.
+
+**JavaScript Usage:**
+```javascript
+import * as std from 'std';
+
+const f = std.open("hpc", "w");
+f.puts(JSON.stringify({
+  "addawssign": {
+    "request": {
+      "url": "https://s3.amazonaws.com/my-bucket/my-object",
+      "method": "GET",
+      "headers": {
+        "Host": "s3.amazonaws.com"
+      },
+      "body": null
+    },
+    "credentials": {
+      "access_key": "AKIAIOSFODNN7EXAMPLE",
+      "secret_key": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+      "region": "us-east-1", 
+      "service": "s3"
+    }
+  }
+}));
+f.close();
+
+const f2 = std.open("hpc", "r");
+const result = JSON.parse(f2.readAsString());
+f2.close();
+
+const signedRequest = result.signed_request;
+```
+
+**Request Fields:**
+- `request`: HTTP request object to be signed
+  - `url`: The target URL
+  - `method`: HTTP method (GET, POST, etc.)
+  - `headers`: Request headers object (optional)
+  - `body`: Request body string (optional)
+- `credentials`: AWS credentials object
+  - `access_key`: AWS access key ID
+  - `secret_key`: AWS secret access key
+  - `region`: AWS region (e.g., "us-east-1")
+  - `service`: AWS service name (e.g., "s3", "lambda")
+
+**Response:**
+```json
+{
+  "signed_request": {
+    "url": "https://s3.amazonaws.com/my-bucket/my-object",
+    "method": "GET", 
+    "headers": {
+      "Host": "s3.amazonaws.com",
+      "Authorization": "AWS4-HMAC-SHA256 Credential=...",
+      "X-Amz-Date": "20231201T120000Z",
+      "X-Amz-Content-Sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "body": null
+  }
+}
+```
+
+**Security Notes:**
+- AWS credentials are never stored or logged by the worker
+- All signing operations use the official AWS SigV4 algorithm
+- Signatures include timestamp and content hash for integrity
+- The signed request can be used immediately with AWS services
+
+### `encrypt`: Public Key Encryption
 
 Encrypts plaintext using ECIES (Elliptic Curve Integrated Encryption Scheme) with AES-256-GCM and HKDF key derivation.
 
@@ -331,9 +411,9 @@ const ciphertext = result.ciphertext;
 }
 ```
 
-### `decrypt` - Private Key Decryption
+### `decrypt`: Private Key Decryption
 
-Decrypts ECIES ciphertext using the private key from the most recent `genkeypair` call in the same JavaScript execution session.
+Decrypts ECIES ciphertext using the private key established when the worker was initialized.
 
 **JavaScript Usage:**
 ```javascript
@@ -370,11 +450,11 @@ const plaintext = result.plaintext;
 
 ### Security Notes
 
-1. **Private Key Storage**: Private keys are stored in memory only during JavaScript execution and are never exposed
+1. **Private Key Storage**: Private keys are established at worker initialization and stored securely in memory, never exposed to JavaScript
 2. **Attestation Coverage**: All cryptographic operations are covered by the enclave's attestation
 3. **Randomness**: All random values (private keys, nonces) come from the NSM hardware RNG
 4. **Authentication**: AES-GCM provides built-in authentication preventing tampering
-5. **Key Isolation**: Each `genkeypair` call generates a fresh key pair independent of previous calls
+5. **Identity Binding**: Worker identity is cryptographically bound to the source code through attestation
 
 ## Error Responses
 

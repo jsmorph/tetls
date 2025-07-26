@@ -104,6 +104,26 @@ curl -s -H "X-TEO-Authorization: $TEO_AUTH" -X POST  -d @d.json https://api.tetl
     tee test.json | jq .
 echo
 
+echo '# Get my identity'
+cat<<EOF > d.json
+{"source": ["import * as std from 'std';",
+            "function hpc(arg) {",
+            "  const x = std.open('hpc', 'w');",
+            "  x.puts(JSON.stringify(arg));",
+            "  x.close();",
+            "  const y = std.open('hpc', 'r');",
+            "  const js = y.readAsString();",
+            "  return JSON.parse(js);",
+            "}",
+            "print(JSON.stringify(hpc({getidentity:{}})));"
+          ]
+}
+EOF
+curl -s -H "X-TEO-Authorization: $TEO_AUTH" -X POST  -d @d.json https://api.tetls.net/js | 
+    tee test.json |
+    jq -r .parsed_response_body
+echo
+
 
 echo '# Exercise the public key functions'
 cat<<EOF > d.json
@@ -114,12 +134,11 @@ cat<<EOF > d.json
             "  x.close();",
             "  const y = std.open('hpc', 'r');",
             "  const js = y.readAsString();",
-            "  print('// debug ' + js);",
             "  return JSON.parse(js);",
             "}",
 
             "const plaintext = 'tacos';",
-	    "const pubkey = hpc({'genkeypair':{}})['public_key'];",
+	    "const pubkey = hpc({'getidentity':{}})['public_key'];",
 	    "const co = hpc({'encrypt':{'public_key':pubkey,'plaintext':plaintext}});",
 	    "const ciphertext = co['ciphertext'];",
 	    "const check = hpc({'decrypt':{'ciphertext':ciphertext}})['plaintext'];",
@@ -133,3 +152,40 @@ curl -s -H "X-TEO-Authorization: $TEO_AUTH" -X POST  -d @d.json https://api.tetl
     jq -r .parsed_response_body
 echo
 
+echo '# AWS-sign an HTTP request'
+cat<<EOF > d.json
+{"source": ["import * as std from 'std';",
+            "function hpc(arg) {",
+            "  const x = std.open('hpc', 'w');",
+            "  x.puts(JSON.stringify(arg));",
+            "  x.close();",
+            "  const y = std.open('hpc', 'r');",
+            "  const js = y.readAsString();",
+            "  return JSON.parse(js);",
+            "}",
+	    "const arg = {",
+	    "  'addawssign': {",
+	    "    'request': {",
+	    "      'url': 'https://s3.amazonaws.com/my-bucket/my-object',",
+	    "      'method': 'GET',",
+	    "      'headers': {",
+	    "        'Host': 's3.amazonaws.com'",
+	    "      },",
+	    "      'body': null",
+	    "    },",
+	    "    'credentials': {",
+	    "      'access_key': 'AKIAIOSFODNN7EXAMPLE',",
+	    "      'secret_key': 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',",
+	    "      'region': 'us-east-1', ",
+	    "      'service': 's3'",
+	    "    }",
+	    "  }",
+	    "}",
+            "print(JSON.stringify(hpc(arg)));"
+          ]
+}
+EOF
+curl -s -H "X-TEO-Authorization: $TEO_AUTH" -X POST  -d @d.json https://api.tetls.net/js | 
+    tee test.json |
+    jq -r .parsed_response_body
+echo
