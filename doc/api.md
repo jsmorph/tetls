@@ -140,15 +140,18 @@ curl -X POST https://api.tetls.net/js \
 
 ## JavaScript Access To Native Functions
 
-JavaScript can access the following functions:
+JavaScript can access the following core functions:
 
 1. `rng`: Get random bytes
 1. `tlsp`: Make an HTTPS request
 1. `attest`: Generate an attestation
 1. `getidentity`: Get worker identity data
+1. `decrypt`: Decrypt using private key
+
+The following functions are also available for convenience:
+
 1. `addawssign`: Add AWS SigV4 signature to requests
 1. `xmltojson`: Convert XML to JSON
-1. `decrypt`: Decrypt using private key
 1. `encrypt`: Encrypt using the public key (just for testing)
 
 See below for details.
